@@ -1,47 +1,47 @@
 @extends('layouts.app')
 
-@section('title', 'Shopping Cart')
+@section('title', 'Your Cart')
 
 @section('content')
-<h1>Your Shopping Cart</h1>
+<div class="container">
+    <h1 class="my-4">Your Cart</h1>
 
-<!-- Sprawdzanie, czy koszyk nie jest pusty -->
-@if ($cartItems->isEmpty())
-    <p>Your cart is empty!</p>
-    <a href="{{ route('products.index') }}" class="btn btn-primary">Continue Shopping</a>
-@else
-    <!-- Tabela produktów w koszyku -->
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Product</th>
-                <th>Quantity</th>
-                <th>Price</th>
-                <th>Total</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach ($cartItems as $item)
+    @if ($cartItems->isEmpty())
+        <p>Your cart is empty.</p>
+    @else
+        <table class="table">
+            <thead>
                 <tr>
-                    <td>{{ $item->product->name }}</td>
-                    <td>{{ $item->quantity }}</td>
-                    <td>${{ $item->product->price }}</td>
-                    <td>${{ $item->product->price * $item->quantity }}</td>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Total</th>
+                    <th>Action</th>
                 </tr>
-            @endforeach
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach ($cartItems as $cartItem)
+                    <tr>
+                        <td>{{ $cartItem->product->name }}</td>
+                        <td>{{ $cartItem->quantity }}</td>
+                        <td>${{ $cartItem->product->price }}</td>
+                        <td>${{ $cartItem->product->price * $cartItem->quantity }}</td>
+                        <td>
+                            <!-- Formularz usuwania -->
+                            <form action="{{ route('cart.remove', ['cartItem' => $cartItem->id]) }}" method="POST" onsubmit="return confirm('Are you sure you want to remove this item from your cart?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                            </form>
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
 
-    <!-- Suma całkowita koszyka -->
-    <p><strong>Total Price:</strong> ${{ $cartItems->sum(fn($item) => $item->product->price * $item->quantity) }}</p>
-
-    <!-- Przycisk Checkout -->
-    <form action="{{ route('cart.checkout') }}" method="POST">
-        @csrf
-        <button type="submit" class="btn btn-success">Checkout</button>
-    </form>
-
-    <!-- Link powrotu do sklepu -->
-    <a href="{{ route('products.index') }}" class="btn btn-primary mt-3">Continue Shopping</a>
-@endif
+        <div class="mt-4">
+            <a href="{{ route('cart.checkout.address') }}" class="btn btn-success">Checkout</a>
+        </div>
+    @endif
+</div>
 @endsection

@@ -12,7 +12,7 @@ class Address extends Model
         'user_id',
         'address_line', 
         'city', 
-        'zip_code'
+        'postal_code'
     ];
 
     public function user() {

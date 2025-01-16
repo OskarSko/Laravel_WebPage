@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
 use App\Models\Order;
+use App\Models\Address;
 class ProfileController extends Controller
 {
     public function index()
@@ -40,4 +41,30 @@ class ProfileController extends Controller
 
         return redirect('/')->with('status', 'Account deleted successfully!');
     }
+    public function orders()
+    {
+        $user = Auth::user();
+        $orders = Order::where('user_id', $user->id)->with('items.product')->get();
+
+        return view('profile.orders', compact('user', 'orders'));
+    }
+
+    // Wyświetlanie zakładki Dane
+    public function data()
+    {
+        $user = Auth::user();
+        $addresses = $user->addresses;
+        //$addresses = Address::where('user_id', $user->id)->get();
+
+        return view('profile.data', compact('user', 'addresses'));
+    }
+
+    // Wyświetlanie zakładki Ustawienia
+    public function settings()
+    {
+        $user = Auth::user();
+        return view('profile.settings', compact('user'));
+    }
+
+
 }

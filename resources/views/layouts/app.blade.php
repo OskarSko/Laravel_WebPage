@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Shop')</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ asset('css/accessibility.css') }}">
+    <script src="{{ asset('js/accessibility.js') }}" defer></script>
 </head>
 <body>
     <header class="bg-dark text-white py-3">
@@ -19,6 +21,7 @@
                         <li class="nav-item"><a class="nav-link" href="{{ route('products.index') }}">Products</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ route('about') }}">About</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ route('contact') }}">Contact</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ route('cart.index') }}">Cart</a></li>
                     </ul>
                     <ul class="navbar-nav">
                         @guest
@@ -34,7 +37,7 @@
                                     {{ Auth::user()->name }}
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                                    <li><a class="dropdown-item" href="{{ route('profile.edit') }}">Profile</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('profile.orders') }}">Profile</a></li>
                                     <li>
                                         <form method="POST" action="{{ route('logout') }}">
                                             @csrf
@@ -47,6 +50,12 @@
                     </ul>
                 </div>
             </nav>
+            <!-- Przyciski dostępności -->
+            <div class="d-flex justify-content-end mt-2">
+    <button id="increaseFont" class="btn btn-outline-light btn-sm me-2">A+</button>
+    <button id="decreaseFont" class="btn btn-outline-light btn-sm me-2">A-</button>
+    <button id="toggleHighContrast" class="btn btn-outline-warning btn-sm">High Contrast</button>
+</div>
         </div>
     </header>
     <main class="container my-4">
@@ -56,5 +65,6 @@
         &copy; {{ date('Y') }} Shop
     </footer>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ asset('js/accessibility.js') }}"></script>
 </body>
 </html>

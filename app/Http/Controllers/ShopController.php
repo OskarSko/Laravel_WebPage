@@ -23,17 +23,27 @@ class ShopController extends Controller
      */
     public function index(Request $request)
     {
-
+        // Pobieranie wszystkich kategorii do wyświetlenia w widoku
         $categories = Category::all();
-
+    
+        // Tworzenie zapytania dla produktów
         $query = Product::query();
-        if ($request->has('category')) {
-            $query->where('category_id', $request->input('category'));
+    
+        // Filtrowanie według kategorii
+        if ($request->has('category') && $request->input('category')) {
+            $categoryId = $request->input('category');
+            $query->where('category_id', $categoryId);
         }
-
+    
+        // Filtrowanie według wyszukiwania
+        if ($request->has('search') && $request->search) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+    
+        // Pobieranie wyników zapytania
         $products = $query->with('category')->get();
-
-        $products = Product::with('category')->get();
+    
+        // Zwracanie widoku z wynikami
         return view('shop.products.index', compact('products', 'categories'));
     }
 
@@ -70,7 +80,7 @@ class ShopController extends Controller
      */
     public function show($id)
     {
-        $product = Product::with('category')->findOrFail($id);
+        $product = Product::with('category', 'reviews.user')->findOrFail($id);
         return view('shop.products.show', compact('product'));
     }
 
@@ -234,6 +244,7 @@ public function checkout()
     // Wyczyszczenie koszyka
     CartItem::where('user_id', Auth::id())->delete();
 
+    session(['order_id' => $order->id]);
     // Przekazanie zamówienia do widoku
     return view('thankyou', compact('order'));
 }
@@ -247,4 +258,112 @@ public function showOrder($orderId)
     return view('orders.show', compact('order'));
 }
 
+public function removeFromCart($cartItemId)
+{
+    $cartItem = CartItem::where('id', $cartItemId)->where('user_id', Auth::id())->first();
+
+    if (!$cartItem) {
+        return redirect()->route('cart.index')->with('error', 'Item not found in your cart.');
+    }
+
+    $cartItem->delete();
+
+    return redirect()->route('cart.index')->with('success', 'Item removed from cart successfully.');
 }
+public function checkoutAddressPayment()
+{
+    $user = Auth::user();
+
+    // Pobierz adresy użytkownika
+    $addresses = Address::where('user_id', $user->id)->get();
+
+    // Lista metod płatności (przykładowe metody)
+    $paymentMethods = [
+        'credit_card' => 'Credit Card',
+        'paypal' => 'PayPal',
+        'bank_transfer' => 'Bank Transfer',
+    ];
+
+    return view('shop.checkout.address-payment', compact('addresses', 'paymentMethods'));
+}
+
+public function processPayment(Request $request)
+{
+    // Walidacja danych wejściowych
+    $validated = $request->validate([
+        'payment_method' => 'required|in:credit_card,paypal,bank_transfer',
+        'address_id' => 'required|exists:addresses,id',
+    ]);
+
+    // Pobranie aktywnego koszyka użytkownika
+    $cartItems = CartItem::where('user_id', Auth::id())->with('product')->get();
+
+    if ($cartItems->isEmpty()) {
+        return redirect()->route('cart.index')->with('error', 'Your cart is empty!');
+    }
+
+    // Obliczenie całkowitej ceny
+    $totalPrice = $cartItems->sum(function ($cartItem) {
+        return $cartItem->product->price * $cartItem->quantity;
+    });
+
+    // Tworzenie zamówienia
+    $order = Order::create([
+        'user_id' => Auth::id(),
+        'total_price' => $totalPrice,
+    ]);
+
+    // Tworzenie pozycji zamówienia
+    foreach ($cartItems as $cartItem) {
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $cartItem->product_id,
+            'quantity' => $cartItem->quantity,
+            'price' => $cartItem->product->price,
+        ]);
+
+        // Zmniejszenie stanu magazynowego
+        $cartItem->product->decrement('stock', $cartItem->quantity);
+    }
+
+    // Tworzenie płatności
+    Payment::create([
+        'order_id' => $order->id,
+        'status' => 'completed',
+        'amount' => $totalPrice,
+        'payment_method' => $validated['payment_method'],
+    ]);
+
+    // Czyszczenie koszyka
+    CartItem::where('user_id', Auth::id())->delete();
+
+    // Przekierowanie do strony podziękowania
+    return redirect()->route('thankyou')->with('order', $order);
+}
+public function storeReview(Request $request)
+{
+    $request->validate([
+        'product_id' => 'required|exists:products,id',
+        'rating' => 'required|integer|min:1|max:5',
+        'comment' => 'nullable|string|max:1000',
+    ]);
+
+    Review::create([
+        'user_id' => auth()->id(),
+        'product_id' => $request->product_id,
+        'rating' => $request->rating,
+        'comment' => $request->comment,
+    ]);
+
+    return redirect()->back()->with('success', 'Review added successfully!');
+}
+
+
+
+
+
+
+}
+
+
+
