@@ -46,7 +46,6 @@ class AddressController extends Controller
     }
     public function destroy(Address $address)
 {
-    // Upewnij się, że użytkownik może usunąć tylko swoje adresy
     if ($address->user_id !== Auth::id()) {
         abort(403, 'Unauthorized action.');
     }

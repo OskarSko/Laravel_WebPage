@@ -15,7 +15,6 @@ class ProfileController extends Controller
     public function index()
     {
         $user = Auth::user();
-        // Pobieranie zamówień z relacją do produktów w order_items
         $orders = Order::where('user_id', $user->id)->with('items.product')->get();
 
         return view('profile.edit', compact('user', 'orders'));
@@ -49,17 +48,14 @@ class ProfileController extends Controller
         return view('profile.orders', compact('user', 'orders'));
     }
 
-    // Wyświetlanie zakładki Dane
     public function data()
     {
         $user = Auth::user();
         $addresses = $user->addresses;
-        //$addresses = Address::where('user_id', $user->id)->get();
 
         return view('profile.data', compact('user', 'addresses'));
     }
 
-    // Wyświetlanie zakładki Ustawienia
     public function settings()
     {
         $user = Auth::user();

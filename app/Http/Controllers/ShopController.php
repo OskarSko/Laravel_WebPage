@@ -23,27 +23,22 @@ class ShopController extends Controller
      */
     public function index(Request $request)
     {
-        // Pobieranie wszystkich kategorii do wyświetlenia w widoku
         $categories = Category::all();
     
-        // Tworzenie zapytania dla produktów
         $query = Product::query();
     
-        // Filtrowanie według kategorii
         if ($request->has('category') && $request->input('category')) {
             $categoryId = $request->input('category');
             $query->where('category_id', $categoryId);
         }
     
-        // Filtrowanie według wyszukiwania
         if ($request->has('search') && $request->search) {
             $query->where('name', 'like', '%' . $request->search . '%');
         }
     
-        // Pobieranie wyników zapytania
         $products = $query->with('category')->get();
-    
-        // Zwracanie widoku z wynikami
+        $query->paginate(10)->appends($request->except('page'));
+        $products = $query->paginate(10);
         return view('shop.products.index', compact('products', 'categories'));
     }
 
@@ -52,9 +47,9 @@ class ShopController extends Controller
      */
     public function create()
     {
-        $product = new Product();
+        
         $categories = Category::all();
-        return view('shop.products.create', compact('product', 'categories'));
+        return view('shop.products.create', compact('categories'));
     }
 
     /**
@@ -72,7 +67,8 @@ class ShopController extends Controller
 
         Product::create($validated);
 
-        return redirect()->route('shop.products.index')->with('success', 'Product created successfully.');
+        return redirect()->route('products.index')->with('success', 'Product created successfully.');
+
     }
 
     /**
@@ -99,8 +95,6 @@ class ShopController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $product = Product::findOrFail($id);
-
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'required|string',
@@ -108,10 +102,11 @@ class ShopController extends Controller
             'stock' => 'required|integer|min:0',
             'category_id' => 'required|exists:categories,id',
         ]);
-
+    
+        $product = Product::findOrFail($id);
         $product->update($validated);
-
-        return redirect()->route('shop.products.index')->with('success', 'Product updated successfully.');
+    
+        return redirect()->route('products.index')->with('success', 'Product updated successfully.');
     }
 
     /**
@@ -120,9 +115,10 @@ class ShopController extends Controller
     public function destroy($id)
     {
         $product = Product::findOrFail($id);
-        $product->delete();
 
-        return redirect()->route('shop.products.index')->with('success', 'Product deleted successfully.');
+    $product->delete();
+
+    return redirect()->route('products.index')->with('success', 'Product deleted successfully.');
     }
 
     /**
@@ -160,13 +156,11 @@ class ShopController extends Controller
         return redirect()->back()->with('error', 'Product is out of stock.');
     }
 
-    // Tworzenie zamówienia
     $order = Order::create([
         'user_id' => Auth::id(),
         'total_price' => $product->price,
     ]);
 
-    // Tworzenie pozycji zamówienia
     OrderItem::create([
         'order_id' => $order->id,
         'product_id' => $product->id,
@@ -174,16 +168,18 @@ class ShopController extends Controller
         'price' => $product->price,
     ]);
 
-    // Zmniejszenie ilości produktu w magazynie
     $product->decrement('stock', 1);
 
-    // Przekierowanie na stronę "Thank You" z danymi zamówienia
     return view('thankyou', ['order' => $order]);
     }
 
     public function addToCart(Request $request, $productId)
 {
     $product = Product::findOrFail($productId);
+
+    if ($product->stock <= 0) {
+        return redirect()->back()->with('error', 'Product is out of stock and cannot be added to the cart.');
+    }
 
     $cartItem = CartItem::where('user_id', Auth::id())
         ->where('product_id', $productId)
@@ -217,18 +213,15 @@ public function checkout()
         return redirect()->route('cart.index')->with('error', 'Your cart is empty!');
     }
 
-    // Obliczenie całkowitej ceny zamówienia
     $totalPrice = $cartItems->sum(function ($cartItem) {
         return $cartItem->product->price * $cartItem->quantity;
     });
 
-    // Tworzenie zamówienia
     $order = Order::create([
         'user_id' => Auth::id(),
         'total_price' => $totalPrice,
     ]);
 
-    // Tworzenie pozycji zamówienia
     foreach ($cartItems as $cartItem) {
         OrderItem::create([
             'order_id' => $order->id,
@@ -237,15 +230,12 @@ public function checkout()
             'price' => $cartItem->product->price,
         ]);
 
-        // Zmniejszenie ilości w magazynie
         $cartItem->product->decrement('stock', $cartItem->quantity);
     }
 
-    // Wyczyszczenie koszyka
     CartItem::where('user_id', Auth::id())->delete();
 
     session(['order_id' => $order->id]);
-    // Przekazanie zamówienia do widoku
     return view('thankyou', compact('order'));
 }
 
@@ -255,7 +245,7 @@ public function showOrder($orderId)
 {
     $order = Order::with('items.product')->findOrFail($orderId);
 
-    return view('orders.show', compact('order'));
+    return view('shop.orders.show', compact('order'));
 }
 
 public function removeFromCart($cartItemId)
@@ -272,72 +262,106 @@ public function removeFromCart($cartItemId)
 }
 public function checkoutAddressPayment()
 {
-    $user = Auth::user();
+    $buyNowProduct = session('buy_now_product');
+    $cartItems = CartItem::where('user_id', Auth::id())->with('product')->get();
 
-    // Pobierz adresy użytkownika
-    $addresses = Address::where('user_id', $user->id)->get();
+    if (!$buyNowProduct && $cartItems->isEmpty()) {
+        return redirect()->route('cart.index')->with('error', 'Your cart is empty!');
+    }
 
-    // Lista metod płatności (przykładowe metody)
+    $addresses = Address::where('user_id', Auth::id())->get();
+
     $paymentMethods = [
         'credit_card' => 'Credit Card',
         'paypal' => 'PayPal',
         'bank_transfer' => 'Bank Transfer',
     ];
 
-    return view('shop.checkout.address-payment', compact('addresses', 'paymentMethods'));
+    return view('shop.checkout.address-payment', compact('addresses', 'buyNowProduct', 'cartItems', 'paymentMethods'));
 }
 
 public function processPayment(Request $request)
 {
-    // Walidacja danych wejściowych
-    $validated = $request->validate([
-        'payment_method' => 'required|in:credit_card,paypal,bank_transfer',
+    $request->validate([
         'address_id' => 'required|exists:addresses,id',
+        'payment_method' => 'required|string',
     ]);
 
-    // Pobranie aktywnego koszyka użytkownika
-    $cartItems = CartItem::where('user_id', Auth::id())->with('product')->get();
+    $userId = Auth::id();
+    $buyNowProduct = session('buy_now_product');
+    $cartItems = CartItem::where('user_id', $userId)->with('product')->get();
 
-    if ($cartItems->isEmpty()) {
-        return redirect()->route('cart.index')->with('error', 'Your cart is empty!');
-    }
-
-    // Obliczenie całkowitej ceny
-    $totalPrice = $cartItems->sum(function ($cartItem) {
-        return $cartItem->product->price * $cartItem->quantity;
-    });
-
-    // Tworzenie zamówienia
-    $order = Order::create([
-        'user_id' => Auth::id(),
-        'total_price' => $totalPrice,
-    ]);
-
-    // Tworzenie pozycji zamówienia
-    foreach ($cartItems as $cartItem) {
+    if ($buyNowProduct) {
+        if ($buyNowProduct->stock <= 0) {
+            return redirect()->back()->with('error', 'This product is out of stock.');
+        }
+    
+        $order = Order::create([
+            'user_id' => $userId,
+            'total_price' => $buyNowProduct->price,
+            'status' => 'pending',
+        ]);
+    
         OrderItem::create([
             'order_id' => $order->id,
-            'product_id' => $cartItem->product_id,
-            'quantity' => $cartItem->quantity,
-            'price' => $cartItem->product->price,
+            'product_id' => $buyNowProduct->id,
+            'quantity' => 1,
+            'price' => $buyNowProduct->price,
+        ]);
+    
+        $buyNowProduct->decrement('stock', 1);
+    
+        Payment::create([
+            'order_id' => $order->id,
+            'status' => 'completed',
+            'amount' => $buyNowProduct->price,
+            'payment_method' => $request->payment_method,
+        ]);
+    
+        session()->forget('buy_now_product');
+    
+        return redirect()->route('thankyou')->with('order', $order);
+    } else {
+        if ($cartItems->isEmpty()) {
+            return redirect()->route('cart.index')->with('error', 'Your cart is empty!');
+        }
+        foreach ($cartItems as $cartItem) {
+            if ($cartItem->quantity > $cartItem->product->stock) {
+                return redirect()->route('cart.index')->with('error', "The product '{$cartItem->product->name}' does not have enough stock.");
+            }
+        }
+
+        $totalPrice = $cartItems->sum(function ($cartItem) {
+            return $cartItem->product->price * $cartItem->quantity;
+        });
+
+        $order = Order::create([
+            'user_id' => $userId,
+            'total_price' => $totalPrice,
+            'status' => 'pending',
         ]);
 
-        // Zmniejszenie stanu magazynowego
-        $cartItem->product->decrement('stock', $cartItem->quantity);
+        foreach ($cartItems as $cartItem) {
+            OrderItem::create([
+                'order_id' => $order->id,
+                'product_id' => $cartItem->product_id,
+                'quantity' => $cartItem->quantity,
+                'price' => $cartItem->product->price,
+            ]);
+
+            $cartItem->product->decrement('stock', $cartItem->quantity);
+        }
+
+        Payment::create([
+            'order_id' => $order->id,
+            'status' => 'completed',
+            'amount' => $totalPrice,
+            'payment_method' => $request->payment_method,
+        ]);
+
+        CartItem::where('user_id', $userId)->delete();
     }
 
-    // Tworzenie płatności
-    Payment::create([
-        'order_id' => $order->id,
-        'status' => 'completed',
-        'amount' => $totalPrice,
-        'payment_method' => $validated['payment_method'],
-    ]);
-
-    // Czyszczenie koszyka
-    CartItem::where('user_id', Auth::id())->delete();
-
-    // Przekierowanie do strony podziękowania
     return redirect()->route('thankyou')->with('order', $order);
 }
 public function storeReview(Request $request)
@@ -357,9 +381,24 @@ public function storeReview(Request $request)
 
     return redirect()->back()->with('success', 'Review added successfully!');
 }
+public function buyNowAddressPayment(Request $request, $productId)
+{
+    $product = Product::findOrFail($productId);
 
+    if ($product->stock <= 0) {
+        return redirect()->back()->with('error', 'This product is out of stock.');
+    }
 
+    session(['buy_now_product' => $product]);
 
+    return redirect()->route('cart.checkout.address');
+}
+public function showAddresses()
+{
+    $addresses = Address::where('user_id', Auth::id())->get();
+
+    return view('profile.addresses', compact('addresses'));
+}
 
 
 
