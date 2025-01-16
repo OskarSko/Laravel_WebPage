@@ -6,11 +6,26 @@
 <div class="container">
     <h1 class="my-4">Checkout</h1>
 
+    @if (isset($buyNowProduct))
+        <h4>You're buying:</h4>
+        <p><strong>Product:</strong> {{ $buyNowProduct->name }}</p>
+        <p><strong>Price:</strong> ${{ $buyNowProduct->price }}</p>
+    @else
+        <h4>Cart Summary:</h4>
+        @foreach ($cartItems as $cartItem)
+            <p><strong>Product:</strong> {{ $cartItem->product->name }} - 
+               <strong>Quantity:</strong> {{ $cartItem->quantity }} x 
+               ${{ $cartItem->product->price }}</p>
+        @endforeach
+        <p><strong>Total:</strong> ${{ $cartItems->sum(function ($cartItem) { return $cartItem->product->price * $cartItem->quantity; }) }}</p>
+    @endif
+
+
     <form action="{{ route('cart.process.payment') }}" method="POST">
         @csrf
 
-        <!-- Wybór adresu -->
-        <h3>Select Address</h3>
+
+        <h3 class="mt-4">Select Address</h3>
         @forelse ($addresses as $address)
             <div class="form-check">
                 <input type="radio" name="address_id" id="address-{{ $address->id }}" value="{{ $address->id }}" class="form-check-input" required>
@@ -22,7 +37,7 @@
             <p>No addresses available. Please <a href="{{ route('profile.data') }}">add an address</a>.</p>
         @endforelse
 
-        <!-- Wybór metody płatności -->
+
         <h3 class="mt-4">Select Payment Method</h3>
         @foreach ($paymentMethods as $key => $method)
             <div class="form-check">
@@ -33,7 +48,7 @@
             </div>
         @endforeach
 
-        <!-- Przycisk zapłać -->
+
         <button type="submit" class="btn btn-success mt-4">Pay</button>
     </form>
 </div>

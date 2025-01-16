@@ -9,10 +9,20 @@
     <p><strong>Description:</strong> {{ $product->description }}</p>
     <p><strong>Price:</strong> ${{ $product->price }}</p>
     <p><strong>Stock:</strong> {{ $product->stock }}</p>
+    @if (session('error'))
+        <div class="alert alert-danger">
+            {{ session('error') }}
+        </div>
+    @endif
 
-    <!-- Action Buttons -->
+    @if (session('success'))
+        <div class="alert alert-success">
+            {{ session('success') }}
+        </div>
+    @endif
+
     <div class="mb-4">
-        <form action="{{ route('products.buy', ['product' => $product->id]) }}" method="POST" class="d-inline">
+        <form action="{{ route('products.buy.now', ['product' => $product->id]) }}" method="POST" class="d-inline">
             @csrf
             <button type="submit" class="btn btn-primary">Buy Now</button>
         </form>
@@ -23,7 +33,7 @@
         <a href="{{ route('products.index') }}" class="btn btn-info">Back to Products</a>
     </div>
 
-    <!-- Reviews Section -->
+
     <h3 class="mt-4">Customer Reviews</h3>
     @if ($product->reviews->isEmpty())
         <p>No reviews yet. Be the first to leave a review!</p>
@@ -45,7 +55,6 @@
         </ul>
     @endif
 
-    <!-- Add Review Section -->
     @auth
         <h3>Add a Review</h3>
         <form action="{{ route('reviews.store') }}" method="POST">

@@ -5,7 +5,6 @@
 @section('content')
     <h1>Profile</h1>
 
-    <!-- User Information -->
     <div class="mb-4">
         <h3>User Information</h3>
         <form method="POST" action="{{ route('profile.update') }}">
@@ -26,7 +25,6 @@
         </form>
     </div>
 
-    <!-- Change Password -->
     <div class="mb-4">
         <h3>Change Password</h3>
         <form method="POST" action="{{ route('password.update') }}">
@@ -51,7 +49,6 @@
         </form>
     </div>
 
-    <!-- Delete Account -->
     <div class="mb-4">
         <h3>Delete Account</h3>
         <form method="POST" action="{{ route('profile.destroy') }}">
@@ -63,7 +60,6 @@
         </form>
     </div>
 
-    <!-- Purchase History -->
     <div class="mb-4">
         <h3>Purchase History</h3>
         @forelse ($orders as $order)
@@ -72,7 +68,7 @@
                     <h5 class="card-title">Order #{{ $order->id }}</h5>
                     <p><strong>Total:</strong> ${{ $order->total_price }}</p>
 
-                    <!-- Button to view order details -->
+
                     <a href="{{ route('orders.show', $order->id) }}" class="btn btn-primary">View Details</a>
                 </div>
             </div>

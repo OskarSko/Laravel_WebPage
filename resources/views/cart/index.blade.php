@@ -27,7 +27,6 @@
                         <td>${{ $cartItem->product->price }}</td>
                         <td>${{ $cartItem->product->price * $cartItem->quantity }}</td>
                         <td>
-                            <!-- Formularz usuwania -->
                             <form action="{{ route('cart.remove', ['cartItem' => $cartItem->id]) }}" method="POST" onsubmit="return confirm('Are you sure you want to remove this item from your cart?');">
                                 @csrf
                                 @method('DELETE')

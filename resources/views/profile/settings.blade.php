@@ -3,7 +3,7 @@
 @section('profile-content')
 <h3>Settings</h3>
 
-<!-- Formularz zmiany nazwy i emaila -->
+
 <form method="POST" action="{{ route('profile.update') }}">
     @csrf
     @method('PATCH')
@@ -23,7 +23,7 @@
 
 <hr class="my-4">
 
-<!-- Formularz zmiany hasła -->
+
 <form method="POST" action="{{ route('password.update') }}">
     @csrf
 
@@ -48,7 +48,6 @@
 <hr class="my-4">
 
 
-<!-- Formularz usunięcia konta -->
 <form method="POST" action="{{ route('profile.destroy') }}" onsubmit="return confirmDeleteAccount();">
     @csrf
     @method('DELETE')

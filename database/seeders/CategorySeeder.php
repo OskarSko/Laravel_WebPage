@@ -12,7 +12,11 @@ class CategorySeeder extends Seeder
      */
     public function run(): void
     {
-        Category::create(['name' => 'Electronics']);
-        Category::create(['name' => 'Home Appliances']);
+        Category::create(['name' => 'Telewizory i RTV']);
+        Category::create(['name' => 'Komputery i Laptopy']);
+        Category::create(['name' => 'Smartfony i Tablety']);
+        Category::create(['name' => 'Sprzęt AGD']);
+        Category::create(['name' => 'Małe AGD']);
+        Category::create(['name' => 'Akcesoria RTV/AGD']);
     }
 }

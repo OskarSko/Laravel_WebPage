@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="{{ asset('css/accessibility.css') }}">
     <script src="{{ asset('js/accessibility.js') }}" defer></script>
+
+
 </head>
 <body>
     <header class="bg-dark text-white py-3">
@@ -38,6 +40,9 @@
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
                                     <li><a class="dropdown-item" href="{{ route('profile.orders') }}">Profile</a></li>
+                                    @if (Auth::user()->role === 'admin')
+        <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">Manage Users</a></li>
+    @endif
                                     <li>
                                         <form method="POST" action="{{ route('logout') }}">
                                             @csrf
@@ -50,11 +55,9 @@
                     </ul>
                 </div>
             </nav>
-            <!-- Przyciski dostępności -->
             <div class="d-flex justify-content-end mt-2">
     <button id="increaseFont" class="btn btn-outline-light btn-sm me-2">A+</button>
     <button id="decreaseFont" class="btn btn-outline-light btn-sm me-2">A-</button>
-    <button id="toggleHighContrast" class="btn btn-outline-warning btn-sm">High Contrast</button>
 </div>
         </div>
     </header>
